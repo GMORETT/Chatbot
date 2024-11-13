@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f7f9fc;
+            color: #333;
+        }
+        .chat-popup {
+            display: none; 
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 350px; /* Ajuste aqui para diminuir o tamanho */
+            height: 500px; /* Ajuste aqui para diminuir o tamanho */
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+        }
+        .chat-popup.expanded {
+            width: 550px; /* Ajuste aqui para diminuir o tamanho */
+            height: 600px; /* Ajuste aqui para diminuir o tamanho */
+        }
+        #chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        #chatbox {
+            flex: 1;
+            border-bottom: 1px solid #ddd;
+            padding: 20px;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+        }
+        .message {
+            margin: 15px 0;
+            padding: 12px;
+            border-radius: 8px;
+            background-color: #e9ecef;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #ddd;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .user-message {
+            color: #333;
+            font-weight: bold;
+        }
+        .bot-response {
+            color: #007bff;
+            font-style: italic;
+        }
+        #chat-form {
+            padding: 15px;
+            border-top: 1px solid #ddd;
+            background-color: #fff;
+            display: flex;
+            flex-direction: column;
+        }
+        textarea {
+            width: 100%;
+            padding: 12px;
+            resize: none;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        .start-new-conversation-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s, box-shadow 0.3s;
+            margin-top: 1px;
+        }
+        .start-new-conversation-btn:hover {
+            background-color: #0056b3;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .open-chat-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s;
+        }
+        .open-chat-btn:hover {
+            background-color: #0056b3;
+        }
+        .minimize-btn {
+            position: absolute;
+            top: 2px;
+            right: 518px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .minimize-btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
+    {% load static %}
+</head>
+<body>
+
+    <button class="open-chat-btn" id="openChatBtn">💬</button>
+
+    <div class="chat-popup" id="chatPopup">
+        <button class="minimize-btn" id="minimizeBtn">−</button>
+        <div id="chat-container">
+            <div id="chatbox">
+                {% for message in object_list %}
+                    <div class="message">
+                        <div class="user-message">Você: {{ message.question }}</div>
+                        <div class="bot-response">Bot: {{ message.answer|safe }}</div>
+                    </div>
+                {% endfor %}
+            </div>
+            <form method="post" id="chat-form">
+                {% csrf_token %}
+                <textarea id="messageInput" name="question" rows="2" placeholder="Insira sua pergunta..." required></textarea>
+                <button type="submit" style="display: none;">Enviar</button>
+            </form>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="start_new_conversation" value="true">
+                <button type="submit" class="start-new-conversation-btn">Iniciar Nova Conversa</button>
+            </form>
+        </div>
+    </div>
+
+    <footer>
+    </footer>
+
+    <script>
+        // Função para abrir e fechar o chatbot
+        function toggleChatPopup() {
+            var chatPopup = document.getElementById('chatPopup');
+            if (chatPopup.style.display === 'none' || chatPopup.style.display === '') {
+                chatPopup.style.display = 'block';
+                chatPopup.classList.add('expanded'); // Expande o chat
+                localStorage.setItem('chatPopupOpen', 'true');
+            } else {
+                chatPopup.style.display = 'none';
+                chatPopup.classList.remove('expanded'); // Minimiza o chat
+                localStorage.setItem('chatPopupOpen', 'false');
+            }
+        }
+
+        // Função para minimizar o chatbot
+        document.getElementById('minimizeBtn').addEventListener('click', function() {
+            var chatPopup = document.getElementById('chatPopup');
+            chatPopup.style.display = 'none'; // Minimiza a janela
+            chatPopup.classList.remove('expanded'); // Remove a classe expandida
+            localStorage.setItem('chatPopupOpen', 'false'); // Atualiza o estado no localStorage
+        });
+
+        document.getElementById('openChatBtn').addEventListener('click', toggleChatPopup);
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var chatPopup = document.getElementById('chatPopup');
+            var isOpen = localStorage.getItem('chatPopupOpen') === 'true';
+            chatPopup.style.display = isOpen ? 'block' : 'none'; // Abre ou fecha o chat
+            if (isOpen) {
+                chatPopup.classList.add('expanded'); // Adiciona a classe expandida se estiver aberto
+            } else {
+                chatPopup.classList.remove('expanded'); // Remove a classe expandida se não estiver aberto
+            }
+
+            // Rola para a última mensagem
+            var chatbox = document.getElementById('chatbox');
+            chatbox.scrollTop = chatbox.scrollHeight;
+        });
+
+        document.getElementById('messageInput').addEventListener('keydown', function(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault(); // Impede a quebra de linha
+                document.getElementById('chat-form').submit(); // Submete o formulário
+            }
+        });
+    </script>
+</body>
+</html>
